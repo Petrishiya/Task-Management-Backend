@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,28 +24,50 @@ public class UserService {
     }
 
     public User saveUser(User user) {
-        // Check if the email is already taken
-        if (userRepository.findByEmail(user.getEmail()).isPresent()) {
-            throw new DuplicateDataException("Email already exists!");
-        }
+        validateUser(user);
+        return userRepository.save(user);
+    }
 
-        // Check if the mobile number is already taken
-        if (userRepository.findByMobileno(user.getMobileno()).isPresent()) {
-            throw new DuplicateDataException("Mobile number already exists!");
-        }
+    public ResponseEntity<User> updateUsernameAndMobile(Long id, User updatedUser) {
+        return userRepository.findById(id)
+                .map(user -> {
+                    validateUserForUpdate(user, updatedUser);
+                    user.setName(updatedUser.getName());
+                    user.setMobileno(updatedUser.getMobileno());
+                    User savedUser = userRepository.save(user);
+                    return ResponseEntity.ok(savedUser);
+                })
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
 
-        try {
-            return userRepository.save(user);
-        } catch (DataIntegrityViolationException e) {
-            throw new DuplicateDataException("Email or Mobile Number already exists!");
+    private void validateUser(User user) {
+        Optional<User> existingUserWithEmail = userRepository.findByEmail(user.getEmail());
+        Optional<User> existingUserWithMobile = userRepository.findByMobileno(user.getMobileno());
+
+        if (existingUserWithEmail.isPresent()) {
+            throw new DuplicateDataException("Email already exists");
+        }
+        if (existingUserWithMobile.isPresent()) {
+            throw new DuplicateDataException("Mobile number already exists");
         }
     }
 
-    public List<String> getAssigneesAndCreators() {
-        return userRepository.findAll().stream()
-                .filter(user -> user.getStatus() == User.Status.ACTIVE)
-                .map(User::getName)
-                .collect(Collectors.toList());
+    private void validateUserForUpdate(User existingUser, User updatedUser) {
+        // Ensure email uniqueness
+        if (!existingUser.getEmail().equals(updatedUser.getEmail())) {
+            Optional<User> existingUserWithEmail = userRepository.findByEmail(updatedUser.getEmail());
+            if (existingUserWithEmail.isPresent()) {
+                throw new DuplicateDataException("Email already exists");
+            }
+        }
+
+        // Ensure mobile number uniqueness
+        if (!existingUser.getMobileno().equals(updatedUser.getMobileno())) {
+            Optional<User> existingUserWithMobile = userRepository.findByMobileno(updatedUser.getMobileno());
+            if (existingUserWithMobile.isPresent()) {
+                throw new DuplicateDataException("Mobile number already exists");
+            }
+        }
     }
 
     public User updateUserStatus(Long userId, User.Status status) {
@@ -54,13 +77,10 @@ public class UserService {
         return userRepository.save(user);
     }
 
-    public ResponseEntity<User> updateUsername(Long id, User updatedUser) {
-        return userRepository.findById(id)
-                .map(user -> {
-                    user.setName(updatedUser.getName()); // Only updating the name
-                    User savedUser = userRepository.save(user);
-                    return ResponseEntity.ok(savedUser);
-                })
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public List<String> getAssigneesAndCreators() {
+        return userRepository.findAll().stream()
+                .filter(user -> user.getStatus() == User.Status.ACTIVE)
+                .map(User::getName)
+                .collect(Collectors.toList());
     }
 }

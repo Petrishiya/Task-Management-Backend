@@ -19,8 +19,7 @@ public class UserController {
     private UserService userService;
 
     @GetMapping("/getAllUsers")
-    public List<User> getAllUsers()
-    {
+    public List<User> getAllUsers() {
         return userService.getAllUsers();
     }
 
@@ -30,14 +29,14 @@ public class UserController {
             User createdUser = userService.saveUser(user);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
         } catch (DuplicateDataException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+            // Return error as JSON object
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "An unexpected error occurred."));
         }
     }
 
-    @GetMapping("/getAssigneesAndCreators")
-    public List<String> getAssigneesAndCreators() {
-        return userService.getAssigneesAndCreators();
-    }
+
 
     @PutMapping("/updateStatus/{userId}")
     public ResponseEntity<User> updateUserStatus(@PathVariable Long userId, @RequestBody Map<String, User.Status> request) {
@@ -46,8 +45,14 @@ public class UserController {
         return ResponseEntity.ok(updatedUser);
     }
 
-    @PutMapping("/updateUsername/{id}")
-    public ResponseEntity<User> updateUsername(@PathVariable Long id, @RequestBody User updatedUser) {
-        return userService.updateUsername(id, updatedUser);
+    @PutMapping("/updateUsernameAndMobile/{id}")
+    public ResponseEntity<?> updateUsernameAndMobile(@PathVariable Long id, @RequestBody User updatedUser) {
+        try {
+            return userService.updateUsernameAndMobile(id, updatedUser);
+        } catch (DuplicateDataException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred.");
+        }
     }
 }

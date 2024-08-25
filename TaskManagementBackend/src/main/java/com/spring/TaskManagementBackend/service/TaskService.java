@@ -52,7 +52,7 @@ public class TaskService {
     }
     public List<String> getStatuses() {
         // Example: return a static list of statuses
-        return List.of("TO-DO", "INPROGRESS", "READY FOR QA", "DONE");
+        return List.of("TO-DO", "IN-PROGRESS", "READY FOR QA", "DONE");
     }
 
     public List<String> getAssignees() {
